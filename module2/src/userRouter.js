@@ -2,7 +2,7 @@ const express = require('express');
 const uuid = require('uuid');
 const { getAutoSuggestUsers, getUserById } = require('./utils');
 const httpStatusCodes = require('./httpStatusCodes');
-const validate = require('./validation/middleware');
+const { validateUser, validateUserDuplication } = require('./validation/middleware');
 
 const api = express.Router();
 
@@ -51,7 +51,8 @@ api.post('/addUser',
 
         next();
     },
-    validate,
+    validateUser,
+    validateUserDuplication,
     (req, res) => {
         const user = req.body;
         global.users.push(user);
@@ -76,7 +77,7 @@ api.put('/updateUserById',
 
         next();
     },
-    validate,
+    validateUser,
     (req, res) => {
         const updatedUser = req.body;
 
