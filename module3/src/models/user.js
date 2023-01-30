@@ -16,7 +16,7 @@ const User = sequelize.define('user', {
                 const self = this;
                 User.findOne({ where: { login: value } })
                     .then(user => {
-                        if (user && self.id !== user.id) {
+                        if (user && self.id !== user.id && !user.isdeleted) {
                             return next('Email already in use!');
                         }
                         return next();
