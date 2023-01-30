@@ -1,99 +1,78 @@
 const express = require('express');
-const { Op } = require('sequelize');
-const uuid = require('uuid');
 const httpStatusCodes = require('../config/httpStatusCodes');
-const Group = require('../models/group');
+const { getAllGroups, getGroup, deleteGroup, createGroup, updateGroup } = require('../services/groups');
 
 const api = express.Router();
 
-api.get('/getAllGroups', (req, res) => {
-    Group.findAll()
-    .then(data => {
-        res.status(httpStatusCodes.OK).send(data);
-    })
-    .catch(error => {
-        const { message } = error;
+api.get('/getAllGroups', async (req, res) => {
+    const result = await getAllGroups();
+
+    if (result.error) {
+        const { message } = result.error;
         res.status(httpStatusCodes.BAD_REQUEST).send(message);
-    });
+    } else {
+        const { data } = result;
+        res.status(httpStatusCodes.OK).send(data);
+    }
 });
 
-api.get('/getGroupById', (req, res) => {
+api.get('/getGroupById', async (req, res) => {
     const { id: groupId } = req.query;
-    Group.findOne({
-        where: {
-            id: groupId
-        }
-    }).then(data => {
-        if (data) {
-            res.status(httpStatusCodes.OK).send(data);
-        } else {
-            res.status(httpStatusCodes.OK).send('No group with requested id');
-        }
-    })
-    .catch(error => {
-        const { message } = error;
+
+    const result = await getGroup(groupId);
+
+    if (result.error) {
+        const { message } = result.error;
         res.status(httpStatusCodes.BAD_REQUEST).send(message);
-    });
+    } else {
+        if (result.data) {
+            res.status(httpStatusCodes.OK).send(result.data);
+        } else {
+            res.status(httpStatusCodes.OK).send(result.message);
+        }
+    }
 });
 
 api.delete('/deleteGroupById', async (req, res) => {
     const { id: groupId } = req.query;
-    
-    await Group.destroy(
-        {
-          where: {
-            id: groupId
-          },
-        }
-      ).then(data => {
-          if (data) {
-            res.status(httpStatusCodes.OK).send(`Group with id ${groupId} was successfully deleted!!!`);
-          } else {
-            res.status(httpStatusCodes.OK).send(`No group with requested id ${userId}`);
-          }
-      }).catch(error => {
-          const { message } = error;
-          res.status(httpStatusCodes.BAD_REQUEST).send(message);
-      });
+
+    const result = await deleteGroup(groupId);
+
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(message);
+    } else {
+        const { message } = result;
+        res.status(httpStatusCodes.OK).send(message);
+    }
 });
 
 api.post('/addGroup', async (req, res) => {
     const group = req.body;
 
-    await Group.create({
-        ...group,
-        id: uuid.v4(),
-    }).then(data => {
-        res.status(httpStatusCodes.OK).json({ message: 'Group successfully created!!!', data });
-    }).catch(error => {
-        const { message } = error;
-        res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to create group: ${message}`);
-    });
+    const result = await createGroup(group);
+
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(message);
+    } else {
+        // result: { data, message }
+        res.status(httpStatusCodes.OK).json(result);
+    };
 });
 
 api.put('/updateGroupById', async (req, res) => {
     const { id: groupId } = req.query;
     const groupInfo = req.body;
 
-    console.log(groupInfo.permissions);
+    const result = await updateGroup(groupId, groupInfo);
 
-    await Group.update(
-        { ...groupInfo },
-        {
-          where: {
-            id: groupId
-          },
-        }
-      ).then(data => {
-          if (data) {
-            res.status(httpStatusCodes.OK).send(`Group with id ${groupId} was successfully updated!!!`);
-          } else {
-            res.status(httpStatusCodes.OK).send(`No group with requested id ${groupId}`);
-          }
-      }).catch(error => {
-          const { message } = error;
-          res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to update group: ${message}`);
-      });
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to update group: ${message}`);
+    } else {
+        res.status(httpStatusCodes.OK).send(result.message);
+    }
 });
 
 module.exports = api;

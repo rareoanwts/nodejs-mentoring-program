@@ -3,6 +3,7 @@ const { Op } = require('sequelize');
 const uuid = require('uuid');
 const httpStatusCodes = require('../config/httpStatusCodes');
 const User = require('../models/user');
+const { addUsersToGroup } = require('../services/addUsersToGroup');
 
 const api = express.Router();
 
@@ -104,6 +105,18 @@ api.put('/updateUserById', async (req, res) => {
           const { message } = error;
           res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to update user: ${message}`);
       });
+});
+
+api.post('/addUsersToGroup', async (req, res) => {
+    const { users, groupId } = req.body;
+
+    const response = await addUsersToGroup(users, groupId);
+
+    if (response.error) {
+        res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to add users to group: ${response.message}`);
+    } else {
+        res.status(httpStatusCodes.OK).send('Users were successfully added to the group!!!');
+    }
 });
 
 module.exports =  api;

@@ -3,8 +3,7 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const httpStatusCodes = require('./config/httpStatusCodes');
 const sequelize = require('./sequelize');
-const userRouter = require('./controllers/users');
-const groupRouter = require('./controllers/groups');
+const { userRouter, groupRouter } = require('./controllers');
 const { PORT } = require('./config/variables');
 
 const app = express();
@@ -12,7 +11,7 @@ const app = express();
 app.use(bodyParser.json());
 
 app.use('/users', userRouter);
-app.use('/groups', groupRouter)
+app.use('/groups', groupRouter);
 
 app.use((req, res) => {
     res.status(httpStatusCodes.NOT_FOUND).send('Not Found');
