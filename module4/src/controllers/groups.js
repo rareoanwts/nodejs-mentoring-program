@@ -1,6 +1,7 @@
 const express = require('express');
 const httpStatusCodes = require('../config/httpStatusCodes');
 const { getAllGroups, getGroup, deleteGroup, createGroup, updateGroup } = require('../services/groups');
+const { deleteRecord } = require('../services/userGroup');
 
 const api = express.Router();
 
@@ -42,8 +43,13 @@ api.delete('/deleteGroupById', async (req, res) => {
         const { message } = result.error;
         res.status(httpStatusCodes.BAD_REQUEST).send(message);
     } else {
-        const { message } = result;
-        res.status(httpStatusCodes.OK).send(message);
+        const { error } = await deleteRecord({ groupId });
+        if (error) {
+            res.status(httpStatusCodes.BAD_REQUEST).send(error.message);
+        } else {
+            const { message } = result;
+            res.status(httpStatusCodes.OK).send(message);
+        }
     }
 });
 

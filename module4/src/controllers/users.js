@@ -1,85 +1,77 @@
 const express = require('express');
-const { Op } = require('sequelize');
-const uuid = require('uuid');
 const httpStatusCodes = require('../config/httpStatusCodes');
 const User = require('../models/user');
-const { addUsersToGroup } = require('../services/addUsersToGroup');
+const { createUser, deleteUser, getUser, getUsers, updateUser } = require('../services/users');
+const { addUsersToGroup, deleteRecord } = require('../services/userGroup');
 
 const api = express.Router();
 
-api.get('/list', (req, res) => {
+api.get('/list', async (req, res) => {
     const { limit = 10, filter = '' } = req.query;
-    User.findAll({
-        limit,
-        where: {
-            login: {
-                [Op.like]: `%${filter}%`
-            }
-        }
-    }).then(data => {
-        res.status(httpStatusCodes.OK).send(data);
-    })
-    .catch(error => {
-        const { message } = error;
+
+    const result = await getUsers(limit, filter);
+
+    if (result.error) {
+        const { message } = result.error;
         res.status(httpStatusCodes.BAD_REQUEST).send(message);
-    });
+    } else {
+        const { data } = result;
+        res.status(httpStatusCodes.OK).send(data);
+    }
 });
 
-api.get('/getUserById', (req, res) => {
+api.get('/getUserById', async (req, res) => {
     const { id: userId } = req.query;
-    User.findOne({
-        where: {
-            id: userId,
-            isdeleted: false
-        }
-    }).then(data => {
+
+    const result = await getUser(userId);
+
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(message);
+    } else {
+        const { data, message } = result;
         if (data) {
             res.status(httpStatusCodes.OK).send(data);
+        } else {
+            res.status(httpStatusCodes.OK).send(message)
         }
-
-        res.status(httpStatusCodes.OK).send('No user with requested id');
-    })
-    .catch(error => {
-        const { message } = error;
-        res.status(httpStatusCodes.BAD_REQUEST).send(message);
-    });
+    }
 });
 
 api.delete('/deleteUserById', async (req, res) => {
     const { id: userId } = req.query;
-    
-    await User.update(
-        { isdeleted: true },
-        {
-          where: {
-            id: userId,
-            isdeleted: false
-          },
+
+    const result = await deleteUser(userId);
+
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(message);
+    } else {
+        const { data, message } = result;
+        if (!data) {
+            res.status(httpStatusCodes.OK).send(message);
+        } else {
+            const { error: deleteRecordError } = await deleteRecord({ userId });
+            if (deleteRecordError) {
+                res.status(httpStatusCodes.BAD_REQUEST).send(deleteRecordError.message);
+            } else {
+                res.status(httpStatusCodes.OK).send(message);
+            }
         }
-      ).then(data => {
-          if (data && data[0]) {
-            res.status(httpStatusCodes.OK).send(`User with id ${userId} was successfully deleted!!!`);
-          } else {
-            res.status(httpStatusCodes.OK).send(`No user with requested id ${userId}`);
-          }
-      }).catch(error => {
-          const { message } = error;
-          res.status(httpStatusCodes.BAD_REQUEST).send(message);
-      });
+    }
 });
 
 api.post('/addUser', async (req, res) => {
         const user = req.body;
 
-        await User.create({
-            ...user,
-            id: uuid.v4(),
-        }).then(data => {
-            res.status(httpStatusCodes.OK).json({ message: 'User successfully created!!!', data });
-        }).catch(error => {
+        const result = await createUser(user);
+
+        if (result.error) {
           const { message } = error;
           res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to create user: ${message}`);
-        });
+        } else {
+            res.status(httpStatusCodes.OK).json(result);
+        };
     }
 );
 
@@ -87,24 +79,14 @@ api.put('/updateUserById', async (req, res) => {
     const { id: userId } = req.query;
     const userInfo = req.body;
 
-    await User.update(
-        { ...userInfo },
-        {
-          where: {
-            id: userId,
-            isdeleted: false
-          },
-        }
-      ).then(data => {
-          if (data && data[0]) {
-            res.status(httpStatusCodes.OK).send(`User with id ${userId} was successfully updated!!!`);
-          } else {
-            res.status(httpStatusCodes.OK).send(`No user with requested id ${userId}`);
-          }
-      }).catch(error => {
-          const { message } = error;
-          res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to update user: ${message}`);
-      });
+    const result = await updateUser(userId, userInfo);
+
+    if (result.error) {
+        const { message } = result.error;
+        res.status(httpStatusCodes.BAD_REQUEST).send(`Failed to update user: ${message}`);
+    } else {
+        res.status(httpStatusCodes.OK).send(result.message);
+    };
 });
 
 api.post('/addUsersToGroup', async (req, res) => {

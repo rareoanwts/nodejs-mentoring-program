@@ -1,5 +1,5 @@
 const uuid = require('uuid');
-const UserGroup = require('../models/userGroup');
+const UserGroup = require('../../models/userGroup');
 
 const addUsersToGroup = async (users, groupid) =>  {
     const rowsToAdd = users.map(userid => ({
